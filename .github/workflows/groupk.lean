@@ -9,7 +9,7 @@ run_cmd mk_simp_attr `PRODUCT    -----  BOF BOF
 meta def PRODUCT_CAT  : tactic unit :=
 `[  try {simp only with PRODUCT}]
 run_cmd add_interactive [`PRODUCT_CAT]
-vcez r    ripnvpin  ip vnpi   np
+vcez r    ripnvpin  ip vnpi   np dedscdscdscdscdscsdcdsdcvdsvfdsvfdvffdvfdv
 universes v u
 open category_theory
 open category_theory.limits
