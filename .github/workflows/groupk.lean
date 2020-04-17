@@ -9,7 +9,6 @@ run_cmd mk_simp_attr `PRODUCT    -----  BOF BOF
 meta def PRODUCT_CAT  : tactic unit :=
 `[  try {simp only with PRODUCT}]
 run_cmd add_interactive [`PRODUCT_CAT]
-vcez r    ripnvpin  ip vnpi   np dedscdscdscdscdscsdcdsdcvdsvfdsvfdvffdvfdv
 universes v u
 open category_theory
 open category_theory.limits
@@ -32,14 +31,14 @@ begin
   rw prod_right_def,
   exact h2,
 end
-@[PRODUCT, reassoc] lemma prod.lift_fst {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : prod.lift f g ≫ category_theory.limits.prod.fst = f :=
+@[PRODUCT, reassoc] lemma lem.prod.lift_fst {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : prod.lift f g ≫ category_theory.limits.prod.fst = f :=
 limit.lift_π (binary_fan.mk f g) _
 
-attribute [PRODUCT] prod.lift_fst_assoc
+attribute [PRODUCT] lem.prod.lift_fst_assoc
 
-@[PRODUCT,reassoc]lemma prod.lift_snd {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : prod.lift f g ≫ category_theory.limits.prod.snd = g :=
+@[PRODUCT,reassoc]lemma lem.prod.lift_snd {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : prod.lift f g ≫ category_theory.limits.prod.snd = g :=
 limit.lift_π (binary_fan.mk f g) _
-attribute [PRODUCT] prod.lift_snd_assoc
+attribute [PRODUCT] lem.prod.lift_snd_assoc
 end lem
 namespace Product_stuff
 notation f ` ⊗ `:20 g :20 := category_theory.limits.prod.map f g  ---- 20 
@@ -59,11 +58,11 @@ open lem           -------------------------------------------------------
 /-
      π notation for projection 
 -/
-example  {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : ( f | g) ≫ π1 = f  :=   prod.lift_fst f g 
+example  {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : ( f | g) ≫ π1 = f  :=   lem.prod.lift_fst f g 
 /-
      we can type π : A ⨯ B ⟶ B if we need 
 -/
-example  {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : ( f | g) ≫ (π2 : A ⨯ B ⟶ B) = g := prod.lift_snd f g 
+example  {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : ( f | g) ≫ (π2 : A ⨯ B ⟶ B) = g := lem.prod.lift_snd f g 
 
 example  {A X Y : C} {a b : A ⟶ X ⨯ Y} (h1 : a ≫ π1  = b ≫ π1 ) (h2 : a ≫ π2  = b ≫ π2)  : a = b :=  prod.hom_ext h1 h2
 
@@ -73,14 +72,14 @@ example  {Y A B : C} (f : Y ⟶ A) (g : Y ⟶ B) : ( f | g) ≫ (π2 : A ⨯ B �
 @[PRODUCT]lemma prod.left_composition{Z' Z A B : C}(h : Z' ⟶ Z)(f : Z ⟶ A)(g : Z ⟶ B)  : 
                h ≫ (f | g)  = (h ≫ f | h ≫ g) := 
 begin
-     apply prod.hom_ext,   --- Le right member is of the form ( | )  composition π1 π2 
+     apply lem.prod.hom_ext,   --- Le right member is of the form ( | )  composition π1 π2 
      -- PRODUCT_CAT,  PRODUCT_CAT,  --- here assoc 
      rw assoc,
-     rw prod.lift_fst,
-     rw prod.lift_fst,
-     rw prod.lift_snd,
+     rw lem.prod.lift_fst,
+     rw lem.prod.lift_fst,
+     rw lem.prod.lift_snd,
      rw assoc,
-     rw prod.lift_snd,
+     rw lem.prod.lift_snd,
 end
 -- #print notation
 @[PRODUCT,reassoc]lemma prod.map_first{X Y Z W : C}(f  : X ⟶ Y)(g  : Z ⟶ W) :  (f ⊗ g) ≫ (π1 : Y ⨯ W ⟶ Y) = π1  ≫ f :=  begin 
@@ -94,9 +93,9 @@ attribute [PRODUCT] prod.map_second_assoc
 @[PRODUCT]lemma  prod.otimes_is_prod {X Y Z W : C}(f  : X ⟶ Y)(g  : Z ⟶ W) : (f ⊗ g) = ( π1  ≫ f | π2 ≫ g ) := begin
      apply prod.hom_ext,
      PRODUCT_CAT, PRODUCT_CAT,
-     -- rw prod.lift_fst,
+     -- rw lem.prod.lift_fst,
      -- rw prod.map_first,
-     -- rw prod.lift_snd,
+     -- rw lem.prod.lift_snd,
      -- rw prod.map_second,
 end
 -- notation π1`(`X `x` Y`)` := (limits.prod.fst : X⨯Y ⟶ X)
@@ -124,11 +123,11 @@ end
 begin 
      apply prod.hom_ext,
      PRODUCT_CAT,PRODUCT_CAT,     ---------------------- PROBLEME With the tatict HEEEEEEERRRRRRE 
-     -- rw [prod.lift_fst],
+     -- rw [lem.prod.lift_fst],
      -- rw  assoc, 
      -- rw prod.map_first,
      -- rw ← assoc,               ----- ← assoc here  Problem ? 
-     -- rw prod.lift_fst,          
+     -- rw lem.prod.lift_fst,          
      -- tidy, -- super - power tidy 
 end
 attribute [PRODUCT] prod.prod_otimes_assoc
@@ -165,8 +164,8 @@ def Yoneda_preserve_product (Y : C)(A B : C) :
   end,
   inv_hom_id' := begin
     apply lem.prod.hom_ext,
-    { rw assoc, rw lem.prod.lift_fst, obviously},
-    { rw assoc, rw lem.prod.lift_snd, obviously}
+    { rw assoc, rw lem.lem.prod.lift_fst, obviously},
+    { rw assoc, rw lem.lem.prod.lift_snd, obviously}
   end
 }
 --- Here it just sugar 
@@ -211,8 +210,8 @@ lemma yoneda_sugar_prod (R : C)(A B : C)(X :C)(f : X ⟶ A)(g : X ⟶ B) :
           -- rw  yoneda_sugar.prod.hom R A B,
           -- rw prod.left_composition,
           iterate 2 {rw ← yoneda_sugar.composition},   -- rw ← is the problem ? 
-          rw lem.prod.lift_fst,
-          rw lem.prod.lift_snd,
+          rw lem.lem.prod.lift_fst,
+          rw lem.lem.prod.lift_snd,
      end
 
 
@@ -239,9 +238,9 @@ lemma  yoneda_sugar.otimes (R : C){Y Z K :C}(f : X ⟶ Y )(g : Z ⟶ K) :
      rw ← assoc,
      rw prod.left_composition,
      rw ← assoc,
-     rw prod.lift_fst,
+     rw lem.prod.lift_fst,
      rw ← assoc,
-     rw prod.lift_snd,
+     rw lem.prod.lift_snd,
      -- rw yoneda_sugar.composition,
      -- rw yoneda_sugar.composition,
 end
@@ -266,7 +265,7 @@ lemma yonega_sugar.one_otimes' (R :C)(X Y Z: C) (f : X ⟶ Y) :
      rw prod.map_second,
      rw comp_id,
      rw prod.otimes_is_prod,rw prod.left_composition,rw ← assoc, 
-     rw prod.lift_fst,rw ←  assoc,rw prod.lift_snd,rw comp_id,
+     rw lem.prod.lift_fst,rw ←  assoc,rw lem.prod.lift_snd,rw comp_id,
      rw yoneda_sugar.composition,
  end
 
@@ -295,8 +294,8 @@ lemma yonega_sugar.one_otimes' (R :C)(X Y Z: C) (f : X ⟶ Y) :
 --   end,
 --   inv_hom_id' := begin
 --     apply lem.prod.hom_ext,
---     { rw assoc, rw lem.prod.lift_fst, obviously},
---     { rw assoc, rw lem.prod.lift_snd, obviously}
+--     { rw assoc, rw lem.lem.prod.lift_fst, obviously},
+--     { rw assoc, rw lem.lem.prod.lift_snd, obviously}
 --   end
 -- }
 
@@ -351,8 +350,8 @@ lemma yonega_sugar.one_otimes' (R :C)(X Y Z: C) (f : X ⟶ Y) :
 --           -- rw prod.left_composition,
 --           -- iterate 2 {rw ← yoneda_sugar.composition},   -- rw ← is the problem ? 
 --           -- PRODUCT_CAT,
---           -- rw lem.prod.lift_fst,
---           -- rw lem.prod.lift_snd,  
+--           -- rw lem.lem.prod.lift_fst,
+--           -- rw lem.lem.prod.lift_snd,  
 --      end
 -- attribute [PRODUCT] yoneda_sugar_prod_assoc
 -- @[PRODUCT]lemma yoneda_sugar_prod_inv (R : C)(A B : C)(X :C)(f : X ⟶ A)(g : X ⟶ B) : 
@@ -373,9 +372,9 @@ lemma yonega_sugar.one_otimes' (R :C)(X Y Z: C) (f : X ⟶ Y) :
 --      rw ← assoc,
 --      rw prod.left_composition,
 --      rw ← assoc,
---      rw prod.lift_fst,
+--      rw lem.prod.lift_fst,
 --      rw ← assoc,
---      rw prod.lift_snd,
+--      rw lem.prod.lift_snd,
 --      rw yoneda_sugar.composition,
 --      rw yoneda_sugar.composition,
 --      exact rfl,
@@ -400,7 +399,7 @@ lemma yonega_sugar.one_otimes' (R :C)(X Y Z: C) (f : X ⟶ Y) :
 --      rw prod.map_second,
 --      rw comp_id,
 --      rw prod.otimes_is_prod,rw prod.left_composition,rw ← assoc, 
---      rw prod.lift_fst,rw ←  assoc,rw prod.lift_snd,rw comp_id,
+--      rw lem.prod.lift_fst,rw ←  assoc,rw lem.prod.lift_snd,rw comp_id,
 --      rw yoneda_sugar.composition,
 --      exact rfl,
 --  end
