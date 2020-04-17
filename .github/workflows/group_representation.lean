@@ -5,12 +5,11 @@ Authors: ...
 import linear_algebra.basic
 import algebra.group.hom
 /- we will probably need to import other files soon too, like `linear_algebra.finite_dimensional`. -/
-set_option trace.simplify true
+-- set_option trace.simplify true
 run_cmd mk_simp_attr `RW_REP
 meta def rw_simp  : tactic unit :=
 `[  try {simp only with RW_REP}]
 run_cmd add_interactive [`rw_simp]
-
 
 universe variables u v w w'
 open group
@@ -21,10 +20,10 @@ open linear_map.general_linear_group
 
 attribute [RW_REP] coe_add coe_neg coe_smul coe_mk subtype.eta
 namespace NOTATION
-notation `GL`  := general_linear_group
-notation  `L`:80 f :80:= general_linear_group.to_linear_map f
-notation  `F`:80 f :82:= general_linear_group.to_fun f 
-notation  a` ⊚ `:80 b:80 := linear_map.comp a b
+notation  `GL`                := general_linear_group
+notation  `L`:80 f :80        := general_linear_group.to_linear_map f
+notation  `F`:80 f :82        := general_linear_group.to_fun f   --- add in mathlib 
+notation  a` ⊚ `:80 b:80      := linear_map.comp a b
 end NOTATION
 /- maybe needs a shorter name -/
 /-- A representation of a group `G` is an `R`-module `M` with a group homomorphisme from  `G` to
@@ -42,9 +41,14 @@ namespace MY_TEST
 variables (f  : M →ₗ[R] M) ( x y : M) 
 variables (ρ : group_representation G R M)
 include ρ 
-example : f (x+ y) = f(x)+f(y) :=  f.add x y 
+example : f (x+ y) = f(x)+f(y) :=  f.add x y  
+
 @[RW_REP] theorem   linearity (g : G ) (x y : M): (L ρ g) (x+y) = (L ρ g) (x) +  (L ρ g) (y) := 
 begin exact (L ρ g).add x y end
+
+@[RW_REP] theorem   smul' (g : G) (m : M) (r : R) : (L ρ g) (r • m) = r • ((L ρ g) m) := begin 
+     exact (L ρ g).smul r m,
+end
 variables  (g g' : G) 
 
 variables (p : submodule R M)
@@ -82,19 +86,14 @@ F ρ (g * g')  = (F ρ g)  ∘  (F ρ g') := begin
 end
 -- @[RW_REP]lemma L_to_F (g : G) :  (L ρ g).to_fun = (F ρ g) := rfl
 
-example :   F ρ (g * g') = (F ρ g) ∘  (F ρ g')  := begin rw_simp, end
+example :   F ρ (g * g') = (F ρ g) ∘  (F ρ g')    := begin rw_simp, end
 example :   L ρ (g * g') = (L ρ g) ⊚   (L ρ g')  := begin rw_simp, end
-
-
-lemma joujou (x y : M)(g : G) (p : submodule R M) (hx : x ∈ p)(hy : y ∈ p): true := begin 
-     let z :=(⟨x,hx⟩+⟨y,hy⟩ : p),  
-     let i := (L ρ g) x, 
-     trivial,
+lemma mul_one (ρ : group_representation G R M) : (L ρ 1) = 1 := begin 
+rw ρ.map_one, exact rfl,
 end
-
 end MY_TEST
-namespace group_representation 
 
+namespace group_representation 
 /- do we want this instance? Then we don't have to write `(ρ g).1 x` instead of `ρ g x`. -/
 instance : has_coe (general_linear_group R M) (M →ₗ[R] M) := ⟨λ x, x.1⟩
 protected structure morphism (ρ : group_representation G R M) (π : group_representation G R M') :
@@ -118,107 +117,61 @@ namespace stability
  -/
 variables {ρ1 : group_representation G R M}{p : submodule R M}
 /-
+     Strategy maths : We have ρ g x ∈ p for x ∈ p so 
+     you have a map : ρ' g : p → p ... linear_map, invertible (restriction of ρ g⁻¹ ) and trivial trivial trivial 
+     For lean : this is not trivial. We have to verify some stuff. 
      Lemma to try to deal with convertion  
 -/
 lemma sub_module.eq_trans (x y : M) (hx : x ∈ p)(hy : y ∈ p) :  
 (x : M) = (y : M) →  (⟨x,hx⟩ : p)   = (⟨ y,hy⟩ : p )  := begin 
      intros,congr ; try { assumption },
 end 
-lemma sub_module_val (x : M) (hx : x ∈ p) : (⟨x,hx ⟩ : p).val = (x : M) := rfl
+-- lemma sub_module_val (x : M) (hx : x ∈ p) : (⟨x,hx ⟩ : p).val = (x : M) := rfl
 
-def stable_sub_module (ρ1 : group_representation G R M)(p : submodule R M) := 
-      ∀ g : G, ∀ x : p, ρ1 g x ∈ p 
+def stable_sub_module (ρ : group_representation G R M)(p : submodule R M) :=   ∀ g : G, ∀ x : p, (L ρ g) x ∈ p 
 /-
-     Etudier un peu la notion de stability ! 
+     First Step : we define G → (p →ₗ[R] p)
 -/
 
-lemma add_conv    (x y : M)(g : G) :  ρ1 g (x+y) = ρ1 g x + ρ1 g y :=   (ρ1 g : M →ₗ[R] M ).add  x y 
-lemma scalar_conv (x : M)(r : R) : ρ1 g ( r • x) =  r • ρ1 g x :=    (ρ1 g : M →ₗ[R] M).smul r x 
-
-def restriction (h : stable_sub_module ρ1 p) : G → (p →ₗ[R] p)  := λ g, begin
+def restriction (h : stable_sub_module ρ p) : G → (p →ₗ[R] p)  := λ g, begin
      exact {
-          to_fun := λ x,⟨ρ1 g x, h g x⟩,  
-          add := begin  
-                    intros x y,
+          to_fun    := λ x, ⟨(L ρ g ) x, h g x⟩,  
+          add       := begin  intros x y, rw_simp, exact rfl, end,  
+          smul      := begin intro c, intros x, rw_simp, exact rfl, end
+     }, 
+end
+open MY_TEST
+@[RW_REP]lemma restriction_ext (h : stable_sub_module ρ p) (y : p) 
+: ((L ρ g) y : M ) = (restriction ρ h g y : M) := rfl 
+def  restriction_equiv (h : stable_sub_module ρ p) (g : G) :  (p ≃ p) :=  
+{ to_fun := (restriction ρ h g),
+  inv_fun := (restriction ρ h g⁻¹),
+  left_inv := begin intros x,rcases x with ⟨ζ,hyp ⟩,
                     apply sub_module.eq_trans,
-                    iterate 2 {rw sub_module_val},
-                   rw_simp,
-               end,  
-          smul := begin       
-               intro c, intros x, apply sub_module.eq_trans,  iterate 1 {rw sub_module_val}, submodule_simp,--simp,
-          end}, 
-end
-/-
-     important rfl lemma 
--/
-#print group
-#print function.left_inverse
-section Restriction 
-variables (h : stable_sub_module ρ1 p)
-@[REPRESENTATION]lemma restriction_ext (h : stable_sub_module ρ1 p)(g :G)(x : p)   : 
-(restriction h g).to_fun x  =   (⟨ρ1 g x, h g x⟩) := rfl  
-lemma rest_is_lin_equiv (h : stable_sub_module ρ1 p) (g : G) : p ≃ₗ[R] p :=  begin 
-     exact linear_equiv.mk  
-          (restriction h g).to_fun
-          (restriction h g).add
-          (restriction h g).smul 
-          ((restriction h g⁻¹).to_fun)
-          (begin 
-               intros x,rcases x, rw restriction_ext,rw restriction_ext,
-               submodule_simp,apply sub_module.eq_trans,rw ←  rho_apply,
-               rw inv_mul_self g,
-               rw ρ1.map_one,exact rfl,
-          end)
-          (begin intros x,rcases x, rw restriction_ext,rw restriction_ext,
-               submodule_simp,apply sub_module.eq_trans,rw ←  rho_apply,
-               rw mul_inv_self g,
-               rw ρ1.map_one,exact rfl, end ), 
-end
-lemma rest_is_lin_equiv_fun (h : stable_sub_module ρ1 p) (g : G) : (rest_is_lin_equiv h g).to_fun =
-(restriction h g).to_fun := by apply_instance begin 
-     ext,rw restriction_ext,
-end 
-theorem sub_to_fun (h : stable_sub_module ρ1 p) :  G → GL R p := begin  
-     intros g,
-     exact general_linear_group.of_linear_equiv (rest_is_lin_equiv h g),
- end
- lemma sub_to_fun_val (h : stable_sub_module ρ1 p) (g :G) : (sub_to_fun h g).val = restriction h g := 
- begin 
-     dunfold sub_to_fun,rw of_linear_equiv_val,
-     end
- lemma sub_to_fun_apply (h : stable_sub_module ρ1 p) (g : G)  (x : p): 
-       ((general_linear_equiv R p).to_equiv (sub_to_fun h g)).to_linear_map  x =  
-       (⟨ρ1 g (x : M), h g x⟩ : p):= 
-        begin 
-        rw general_linear_equiv_to_linear_map,
-        sorry, end
+                    rw ← restriction_ext,rw_simp,
+                    rw [← comp_apply,←  mul_to_composition_of_linear_map, inv_mul_self, ρ.map_one],
+                    exact rfl,end,
+  right_inv := begin 
+               intros x,
+               rcases x with ⟨ζ,hyp⟩,
+               apply sub_module.eq_trans,rw ← restriction_ext, rw  ← comp_apply,rw_simp,
+               rw  ← mul_to_composition_of_linear_map, rw mul_inv_self g, rw MY_TEST.mul_one,exact rfl,
+  end }
+def Restriction (h : stable_sub_module ρ p) (g : G) : p ≃ₗ[R] p :=
+ { .. restriction ρ h g, .. restriction_equiv ρ h g}
 
-/-
-Next step make sub_to_fun a group morphism ! 
--/
-#check is_group_hom 
-/-
-@[class, priority 100, to_additive to_additive.value_type.mk (name.mk_string "is_add_group_hom" name.anonymous) (option.none.{0} string), priority 100, to_additive_aux name.mk_string "is_add_group_hom" name.anonymous]
-structure is_group_hom : Π {α : Type u} {β : Type v} [_inst_1 : group α] [_inst_2 : group β], (α → β) → Prop
-fields:
-is_group_hom.to_is_mul_hom : ∀ {α : Type u} {β : Type v} [_inst_1 : group α] [_inst_2 : group β] {f : α → β} [c : is_group_hom f],
-  is_mul_hom f
--/
-lemma map_mul' (g g' : G) :   sub_to_fun h (g * g') = sub_to_fun  h g * sub_to_fun h g' := begin 
-sorry,
-end
-end Restriction 
+def sub_representation (h : stable_sub_module ρ p) : group_representation G R p := 
+{ to_fun := λ g, of_linear_equiv (Restriction ρ h g),
+  map_one' := begin 
+                rw units.ext_iff,ext,rcases x,rw_simp,
+                apply sub_module.eq_trans,rw MY_TEST.mul_one,exact rfl,
+               end,
+  map_mul' := begin intros g1 g2,rw units.ext_iff, ext, rcases x,
+                    apply sub_module.eq_trans,rw_simp,rw of_linear_equiv_val, 
+                    rw  mul_to_composition_of_linear_map,
+                    rw comp_apply, exact rfl,
+ end }
 end stability
-
--- def to_linear_equivalence (g : G)( h : stable_sub_module ρ1 p) : p ≃ₗ[R] p := 
--- begin 
---     exact  of_linear 
---     (of h g)(of h g⁻¹)
---     (begin ext,apply set_coe.ext,sorry, end)
---     (sorry),
--- end
-
-
 
 
 -- notation ρ1 `_|` p := restriction ρ1 p 
