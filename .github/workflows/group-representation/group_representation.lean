@@ -10,8 +10,10 @@ run_cmd mk_simp_attr `RW_REP
 meta def rw_simp  : tactic unit :=
 `[  try {simp only with RW_REP}, try {exact rfl}]
 run_cmd add_interactive [`rw_simp]
-
 universe variables u v w w'
+class has_coe_inv (a : Sort u) (b : Sort v) :=
+(coe : a → b)
+notation `inv`:max x:max := has_coe_inv
 open group
 open linear_map   
 open linear_equiv
@@ -29,7 +31,7 @@ namespace NOTATION
 notation  `GL`                := general_linear_group
 notation  `L`:80 f :80        := general_linear_group.to_linear_map f
 notation  `F`:80 f :82        := general_linear_group.to_fun f   --- add in mathlib 
-notation  a` ⊚ `:80 b:80      := linear_map.comp a b  
+notation  a` ⊚ `:80 b:80     := linear_map.comp a b  
 end NOTATION
 /- maybe needs a shorter name -/
 /-- A representation of a group `G` is an `R`-module `M` with a group homomorphisme from  `G` to
@@ -52,7 +54,6 @@ example : f (x+ y) = f(x)+f(y) :=  f.add x y
 
 @[RW_REP] theorem   linearity (g : G ) (x y : M): ⟦ ρ ⟧ g (x+y) = ⟦ρ⟧ g (x) + ⟦ρ⟧ g (y) := 
 begin exact (⟦ρ⟧ g).add x y end
-
 @[RW_REP] theorem   smul' (g : G)  (r : R)(m : M) : (⟦ ρ⟧  g) (r • m) = r • ((⟦ ρ ⟧  g) m) := begin 
      exact ( ⟦ ρ ⟧ g).smul r m,
 end
@@ -61,7 +62,7 @@ variables  (g g' : G)
 variables (p : submodule R M)
 
 @[RW_REP]lemma F_linearity (x y : M) (g : G) : (F ρ g) (x+y) = (F ρ g) x + (F ρ g) y := begin 
-     exact (L ρ g).add x y,   --- the same for L !  
+     exact ( L ρ  g).add x y,   --- the same for L !  
 end 
 
 variables (h : ∀ x : M, ∀ g : G,  (L ρ  g) x ∈ p)
@@ -78,7 +79,7 @@ example (ρ : group_representation G R M) ( g g' : G) : ρ (g * g') = ρ g * ρ 
 @[RW_REP]lemma rmap_mul (ρ : group_representation G R M) ( g g' : G) :
       ⟦ ρ ⟧  (g * g')  =  ⟦ρ⟧  g   ⊚  ⟦ ρ ⟧  g' := 
 begin 
-     ext, rw comp_apply, iterate 3{rw ← L_to_F}, rw ρ.map_mul,exact rfl,
+     ext, rw comp_apply, iterate 3 {rw ← L_to_F}, rw ρ.map_mul,exact rfl,
 end
 -- @[RW_REP]lemma rmap_mul' (ρ : group_representation G R M) ( g g' : G) :
 --           ⟦ρ⟧  g   ⊚  ⟦ ρ ⟧  g' = ⟦ ρ ⟧  (g * g') := 
@@ -161,25 +162,48 @@ end
 -- @[RW_REP]lemma L_to_F (g : G) :  (L ρ g).to_fun = (F ρ g) := rfl
 
 
-example :    ⟦ ρ ⟧  (g * g') = ( ⟦ ρ⟧  g) ⊚   ( ⟦ρ⟧ g')  := by rw_simp
+example :    ⟦ ρ ⟧  (g * g') = (L ρ g) ⊚   (L ρ g')  := by rw_simp
 lemma mul_one (ρ : group_representation G R M) : (L ρ 1) = 1 := begin 
 rw ρ.map_one, exact rfl,
 end
+instance has_coe_too :               ----------------- 
+  is_monoid_hom (has_coe_to ρ : G → (M →ₗ[R] M)) :=
+{ map_one := rmap_one ρ,
+  map_mul := rmap_mul ρ}
+def new_groupe_representation : 
+( group_representation G R M)  →  G →* (M →ₗ[R] M) := λ ρ, { to_fun := ⟦ρ⟧ ,
+  map_one' := by rw_simp,
+  map_mul' := by {intros,rw_simp} }  
 end MY_TEST
-
 namespace group_representation 
 /- do we want this instance? Then we don't have to write `(ρ g).1 x` instead of `ρ g x`. -/
-instance : has_coe (general_linear_group R M) (M →ₗ[R] M) := ⟨λ x, x.1⟩
+-- instance : has_coe (general_linear_group R M) (M →ₗ[R] M) := ⟨λ x, x.1⟩
 protected structure morphism (ρ : group_representation G R M) (π : group_representation G R M') :
   Type (max w w') :=
   (linear_map : M →ₗ[R] M')
-  (commute : ∀(g : G), linear_map ∘ ρ g  = π g ∘ linear_map)
+  (commute : ∀(g : G), linear_map  ⊚ (⟦ ρ ⟧  g)  = (⟦ π ⟧  g) ⊚  linear_map)
+infixr ` ⟶₁ `:25 := morphism 
 protected structure equiv (ρ : group_representation G R M) (π : group_representation G R M') :
   Type (max w w') :=
   (f : M ≃ₗ[R] M')
-  (commute : ∀(g : G), f ∘  ρ g = π g ∘  f)
+  (commute : ∀(g : G), to_linear_map f ⊚ ⟦ ρ ⟧ g = ⟦π⟧  g ⊚ to_linear_map f)
+variables (ρ : group_representation G R M) (π : group_representation G R M')
+instance has_coe_to_linear_map  : has_coe (equiv ρ π)  (M →ₗ[R] M') := ⟨λ φ ,to_linear_map φ.f⟩
+lemma coe  (φ : equiv ρ π  ) :  ↑φ = to_linear_map φ.f := rfl
+lemma  coe_ext (φ : equiv ρ π  )(g : G) :     (↑φ)  ⊚ (⟦ρ⟧ g)= (⟦π ⟧ g) ⊚  (↑φ) := begin 
+     rw coe,rw φ.commute,
+end
+#print has_coe 
+#print has_inv  
+instance inverse : has_coe_inv (equiv ρ π)  (M' →ₗ[R] M) := ⟨ λ φ, to_linear_map φ.f.symm ⟩ 
+lemma coe_inv       (φ : equiv ρ π  ) :  ↑φ = to_linear_map φ.f.symm := rfl
+lemma heye (ρ : group_representation G R M) (π : group_representation G R M') (φ : equiv ρ  π ) : 
+     ( φ : M' →ₗ[R] M) ⊚ (↑φ) = (linear_map.id : M →ₗ[R] M) :=
+     begin 
+          sorry, 
+     end
 
-variables (ρ : group_representation G R M)
+
 variables (g g' : G)(x : M)
 -- example (x y : M) (g : G) :  ρ  g (x+y)= ρ g x + ρ g y := begin rw (L ρ g).add x y, end 
 
@@ -210,16 +234,16 @@ end
 -- lemma sub_module_val (x : M) (hx : x ∈ p) : (⟨x,hx ⟩ : p).val = (x : M) := rfl
 
 def stable_sub_module (ρ : group_representation G R M)(p : submodule R M) :=  
-                     ∀ g : G, ∀ x : p, (⟦ρ⟧ ρ g) x ∈ p 
+                     ∀ g : G, ∀ x : p, ( ⟦ ρ ⟧  g) x ∈ p 
 /-
      First Step : we define G → (p →ₗ[R] p)
 -/
 
-def restriction (h : stable_sub_module ρ p) : G → (p →ₗ[R] p)  := λ g, begin
+def restriction (hyp_stab : stable_sub_module ρ p) : G → (p →ₗ[R] p)  := λ g, begin
      exact {
-          to_fun    := λ x, ⟨( ⟦ ρ⟧  g ) x, h g x⟩,  
-          add       := begin  intros x y, rw_simp, end,  
-          smul      := begin intro c, intros x, rw_simp, end
+          to_fun    := λ x, ⟨( ⟦ ρ⟧  g ) x, hyp_stab g x⟩,  
+          add       := by {intros x y, rw_simp},   
+          smul      := by {intro c, intros x, rw_simp},
      }, 
 end
 open MY_TEST
@@ -248,8 +272,9 @@ def  restriction_equiv (h : stable_sub_module ρ p) (g : G) :  (p ≃ p) :=
   end }
 def Restriction (h : stable_sub_module ρ p) (g : G) : p ≃ₗ[R] p :=
  { .. restriction ρ h g, .. restriction_equiv ρ h g}
-
-
+/-
+     Helper rfl 
+-/
 def sub_representation (h : stable_sub_module ρ p) : group_representation G R p := 
 { to_fun := λ g, of_linear_equiv (Restriction ρ h g),
   map_one' := begin 
@@ -271,17 +296,24 @@ def sub_representation (h : stable_sub_module ρ p) : group_representation G R p
      (⟦ρ⟧ g ) x.val = ( ⟦ ρ / h ⟧  g) x    := rfl
  
 @[RW_REP] lemma rw_sub_module_action_to (ρ : group_representation G R M) (h : stable_sub_module ρ p) (x : p) : 
-     (⟦ρ ⟧ g) x = ⟦ρ / h⟧ g x :=   
+     (⟦ρ ⟧ g) x = ⟦ρ / h⟧ g x :=  
      begin 
           -- rw_simp, --- joke :D
           exact rfl, 
      end
 example (ρ : group_representation G R M) (h : stable_sub_module ρ p) (x y : p)(r : R) (g g' : G): true := 
      begin 
-     
           have R : ⟦ ρ ⟧ g ( ⟦ ρ ⟧ g' x )+ r • ⟦ ρ ⟧ g ( ⟦ ρ ⟧ g' y ) =   ⟦ ρ / h ⟧ (g * g') (x+ r • y),  
-               swap, trivial,
                iterate 2 {rw ← comp_apply}, rw ← rmap_mul,rw ← smul',rw ← linearity,rw_simp,  
+          trivial, 
           end 
+variables ( e r t : ( (M →ₗ[R] M)))
+#check e*t
 end stability
+
+namespace sum 
+/-
+     Define direct sum of representation  
+-/
+end sum 
 end group_representation
